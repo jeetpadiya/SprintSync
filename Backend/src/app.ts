@@ -1,9 +1,7 @@
 import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import authRoutes from "./routes/authRoutes.js";
-import { db } from "./db/db.js";
-import { users } from "./db/schema.js";
+import routes from "./routes/index.js";
 
 const app: Express = express();
 
@@ -21,24 +19,8 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- API Routes ---
-app.use("/api/auth", authRoutes);
-
-// Health Check
-app.get("/api/health", (_req: Request, res: Response) => {
-  res.status(200).json({ status: "ok", message: "SprintSync API is running" });
-});
-
-// Users test endpoint
-app.get("/api/users", async (_req: Request, res: Response) => {
-  try {
-    const allUsers = await db.select().from(users);
-    res.status(200).json({ success: true, data: allUsers });
-  } catch (error) {
-    console.error("Database query failed:", error);
-    res.status(500).json({ success: false, message: "Database query failed", error });
-  }
-});
+// --- Mount All API Routes ---
+app.use("/api", routes);
 
 // 404 Not Found Handler
 app.use((_req: Request, res: Response) => {
