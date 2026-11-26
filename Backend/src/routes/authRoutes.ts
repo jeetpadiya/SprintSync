@@ -1,5 +1,13 @@
 import { Router } from "express";
-import { register, login, getMe, updateProfile } from "../controllers/authController.js";
+import {
+  register,
+  login,
+  refresh,
+  logout,
+  logoutAll,
+  getMe,
+  updateProfile,
+} from "../controllers/authController.js";
 import { requireAuth } from "../middleware/authMiddleware.js";
 
 const router = Router();
@@ -9,6 +17,15 @@ router.post("/register", register);
 
 // POST /api/auth/login
 router.post("/login", login);
+
+// POST /api/auth/refresh
+router.post("/refresh", refresh);
+
+// POST /api/auth/logout
+router.post("/logout", logout);
+
+// POST /api/auth/logout-all (Protected)
+router.post("/logout-all", requireAuth, logoutAll);
 
 // GET /api/auth/me (Protected)
 router.get("/me", requireAuth, getMe);

@@ -2,10 +2,15 @@ import { Request, Response } from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../db/db.js";
 import { users, refreshTokens, workspaces, workspaceMembers } from "../db/schema.js";
-import { ACCESS_COOKIE_OPTIONS, REFRESH_COOKIE_OPTIONS } from "../utils/cookieOptions.js";
+import {
+  ACCESS_COOKIE_OPTIONS,
+  REFRESH_COOKIE_OPTIONS,
+  SESSION_HINT_COOKIE_OPTIONS,
+  clearAuthCookies,
+} from "../utils/cookieOptions.js";
 import { registerSchema, loginSchema, updateProfileSchema } from "../utils/authSchemas.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 
@@ -21,6 +26,68 @@ const getSecrets = () => {
   }
 
   return { accessSecret, refreshSecret };
+};
+
+interface IssueTokensParams {
+  res: Response;
+  user: { id: string; email: string; role: string };
+  familyId?: string;
+  userAgent: string | null;
+}
+
+/**
+ * Issues an access + refresh JWT pair, persists the SHA-256 refresh token hash,
+ * and attaches HttpOnly cookies to the response.
+ */
+const issueSessionTokens = async ({
+  res,
+  user,
+  familyId = crypto.randomUUID(),
+  userAgent,
+}: IssueTokensParams): Promise<void> => {
+  const { accessSecret, refreshSecret } = getSecrets();
+
+  const accessToken = jwt.sign(
+    {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      jti: crypto.randomUUID(),
+    },
+    accessSecret,
+    {
+      algorithm: "HS256",
+      expiresIn: "15m",
+    }
+  );
+
+  const refreshToken = jwt.sign(
+    {
+      sub: user.id,
+      familyId,
+      jti: crypto.randomUUID(),
+    },
+    refreshSecret,
+    {
+      algorithm: "HS256",
+      expiresIn: "7d",
+    }
+  );
+
+  const tokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  await db.insert(refreshTokens).values({
+    userId: user.id,
+    tokenHash,
+    familyId,
+    userAgent,
+    expiresAt,
+  });
+
+  res.cookie("access_token", accessToken, ACCESS_COOKIE_OPTIONS);
+  res.cookie("refresh_token", refreshToken, REFRESH_COOKIE_OPTIONS);
+  res.cookie("has_session", "1", SESSION_HINT_COOKIE_OPTIONS);
 };
 
 export const register = async (req: Request, res: Response): Promise<void | Response> => {
@@ -79,54 +146,14 @@ export const register = async (req: Request, res: Response): Promise<void | Resp
       });
     }
 
-    // 5. Issue Dual Tokens (Session Initialization)
-    const { accessSecret, refreshSecret } = getSecrets();
-    const familyId = crypto.randomUUID();
-
-    // A. Short-Lived Access Token (15 minutes)
-    const accessToken = jwt.sign(
-      {
-        sub: newUser.id,
-        email: newUser.email,
-        role: newUser.role,
-      },
-      accessSecret,
-      {
-        algorithm: "HS256",
-        expiresIn: "15m",
-      }
-    );
-
-    // B. Long-Lived Refresh Token (7 days) with Family Tracking
-    const refreshToken = jwt.sign(
-      {
-        sub: newUser.id,
-        familyId,
-      },
-      refreshSecret,
-      {
-        algorithm: "HS256",
-        expiresIn: "7d",
-      }
-    );
-
-    // 6. Hash Refresh Token with SHA-256 before Database Persistence
-    const tokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-    await db.insert(refreshTokens).values({
-      userId: newUser.id,
-      tokenHash,
-      familyId,
+    // 5. Issue Dual Tokens (Session Initialization) & Set HttpOnly Cookies
+    await issueSessionTokens({
+      res,
+      user: { id: newUser.id, email: newUser.email, role: newUser.role },
       userAgent: req.headers["user-agent"] || null,
-      expiresAt,
     });
 
-    // 7. Deliver Tokens Exclusively via HttpOnly Cookies
-    res.cookie("access_token", accessToken, ACCESS_COOKIE_OPTIONS);
-    res.cookie("refresh_token", refreshToken, REFRESH_COOKIE_OPTIONS);
-
-    // 8. Respond with Sanitized User Profile (Tokens strictly omitted from JSON)
+    // 6. Respond with Sanitized User Profile (Tokens strictly omitted from JSON)
     return res.status(201).json({
       success: true,
       message: "Account created successfully",
@@ -197,54 +224,14 @@ export const login = async (req: Request, res: Response): Promise<void | Respons
       });
     }
 
-    // 4. Issue Dual Tokens (Session Initialization)
-    const { accessSecret, refreshSecret } = getSecrets();
-    const familyId = crypto.randomUUID();
-
-    // A. Short-Lived Access Token (15 minutes)
-    const accessToken = jwt.sign(
-      {
-        sub: user.id,
-        email: user.email,
-        role: user.role,
-      },
-      accessSecret,
-      {
-        algorithm: "HS256",
-        expiresIn: "15m",
-      }
-    );
-
-    // B. Long-Lived Refresh Token (7 days) with Family Tracking
-    const refreshToken = jwt.sign(
-      {
-        sub: user.id,
-        familyId,
-      },
-      refreshSecret,
-      {
-        algorithm: "HS256",
-        expiresIn: "7d",
-      }
-    );
-
-    // 5. Hash Refresh Token with SHA-256 before Database Persistence
-    const tokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-    await db.insert(refreshTokens).values({
-      userId: user.id,
-      tokenHash,
-      familyId,
+    // 4. Issue Dual Tokens (Session Initialization) & Set HttpOnly Cookies
+    await issueSessionTokens({
+      res,
+      user: { id: user.id, email: user.email, role: user.role },
       userAgent: req.headers["user-agent"] || null,
-      expiresAt,
     });
 
-    // 6. Deliver Tokens Exclusively via HttpOnly Cookies
-    res.cookie("access_token", accessToken, ACCESS_COOKIE_OPTIONS);
-    res.cookie("refresh_token", refreshToken, REFRESH_COOKIE_OPTIONS);
-
-    // 7. Fetch user's workspaces
+    // 5. Fetch user's workspaces
     const userWorkspaces = await db
       .select({
         id: workspaces.id,
@@ -274,6 +261,210 @@ export const login = async (req: Request, res: Response): Promise<void | Respons
     console.error("Login error:", error);
     return res.status(500).json({
       error: "Internal server error during login",
+      code: "INTERNAL_ERROR",
+    });
+  }
+};
+
+/**
+ * POST /api/auth/refresh
+ * Rotates the refresh token with reuse detection and issues a fresh access_token + refresh_token pair.
+ */
+export const refresh = async (req: Request, res: Response): Promise<void | Response> => {
+  try {
+    const incomingToken = req.cookies?.refresh_token as string | undefined;
+
+    if (!incomingToken) {
+      clearAuthCookies(res);
+      return res.status(401).json({
+        error: "Refresh token required",
+        code: "NO_REFRESH_TOKEN",
+      });
+    }
+
+    const { refreshSecret } = getSecrets();
+    let decoded: jwt.JwtPayload;
+
+    try {
+      decoded = jwt.verify(incomingToken, refreshSecret, {
+        algorithms: ["HS256"],
+      }) as jwt.JwtPayload;
+    } catch (err) {
+      clearAuthCookies(res);
+      if (err instanceof jwt.TokenExpiredError) {
+        return res.status(401).json({
+          error: "Refresh token expired",
+          code: "REFRESH_TOKEN_EXPIRED",
+        });
+      }
+      return res.status(401).json({
+        error: "Invalid refresh token",
+        code: "INVALID_REFRESH_TOKEN",
+      });
+    }
+
+    const userId = decoded.sub as string | undefined;
+    const familyId = decoded.familyId as string | undefined;
+
+    if (!userId || !familyId) {
+      clearAuthCookies(res);
+      return res.status(401).json({
+        error: "Invalid refresh token payload",
+        code: "INVALID_REFRESH_TOKEN",
+      });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(incomingToken).digest("hex");
+
+    const [existingToken] = await db
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.tokenHash, tokenHash))
+      .limit(1);
+
+    // Reuse detection: missing record or already revoked token -> revoke entire token family
+    if (!existingToken || existingToken.revoked) {
+      await db
+        .update(refreshTokens)
+        .set({ revoked: true })
+        .where(eq(refreshTokens.familyId, existingToken?.familyId || familyId));
+
+      clearAuthCookies(res);
+      return res.status(401).json({
+        error: "Refresh token reuse detected",
+        code: "TOKEN_REUSE_DETECTED",
+      });
+    }
+
+    if (existingToken.expiresAt <= new Date()) {
+      await db
+        .update(refreshTokens)
+        .set({ revoked: true })
+        .where(eq(refreshTokens.id, existingToken.id));
+
+      clearAuthCookies(res);
+      return res.status(401).json({
+        error: "Refresh token expired",
+        code: "REFRESH_TOKEN_EXPIRED",
+      });
+    }
+
+    // Atomically claim the current refresh token so concurrent requests cannot double-rotate
+    const [claimedToken] = await db
+      .update(refreshTokens)
+      .set({ revoked: true })
+      .where(and(eq(refreshTokens.id, existingToken.id), eq(refreshTokens.revoked, false)))
+      .returning({ id: refreshTokens.id });
+
+    if (!claimedToken) {
+      await db
+        .update(refreshTokens)
+        .set({ revoked: true })
+        .where(eq(refreshTokens.familyId, existingToken.familyId));
+
+      clearAuthCookies(res);
+      return res.status(401).json({
+        error: "Refresh token reuse detected",
+        code: "TOKEN_REUSE_DETECTED",
+      });
+    }
+
+    const [user] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+      })
+      .from(users)
+      .where(eq(users.id, existingToken.userId))
+      .limit(1);
+
+    if (!user) {
+      clearAuthCookies(res);
+      return res.status(401).json({
+        error: "User account not found",
+        code: "USER_NOT_FOUND",
+      });
+    }
+
+    await issueSessionTokens({
+      res,
+      user,
+      familyId: existingToken.familyId,
+      userAgent: req.headers["user-agent"] || null,
+    });
+
+    return res.status(200).json({
+      success: true,
+      authenticated: true,
+    });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    return res.status(500).json({
+      error: "Internal server error during token refresh",
+      code: "INTERNAL_ERROR",
+    });
+  }
+};
+
+/**
+ * POST /api/auth/logout
+ * Revokes the current refresh token and clears all auth cookies.
+ */
+export const logout = async (req: Request, res: Response): Promise<void | Response> => {
+  try {
+    const incomingToken = req.cookies?.refresh_token as string | undefined;
+
+    if (incomingToken) {
+      const tokenHash = crypto.createHash("sha256").update(incomingToken).digest("hex");
+      await db
+        .update(refreshTokens)
+        .set({ revoked: true })
+        .where(eq(refreshTokens.tokenHash, tokenHash));
+    }
+
+    clearAuthCookies(res);
+    return res.status(200).json({
+      success: true,
+      message: "Logged out",
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
+    clearAuthCookies(res);
+    return res.status(200).json({
+      success: true,
+      message: "Logged out",
+    });
+  }
+};
+
+/**
+ * POST /api/auth/logout-all
+ * Revokes every refresh token belonging to the authenticated user.
+ */
+export const logoutAll = async (req: AuthRequest, res: Response): Promise<void | Response> => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({
+        error: "Authentication required",
+        code: "UNAUTHORIZED",
+      });
+    }
+
+    await db
+      .update(refreshTokens)
+      .set({ revoked: true })
+      .where(eq(refreshTokens.userId, req.user.id));
+
+    clearAuthCookies(res);
+    return res.status(200).json({
+      success: true,
+      message: "Logged out from all sessions",
+    });
+  } catch (error) {
+    console.error("Logout all error:", error);
+    return res.status(500).json({
+      error: "Internal server error during logout",
       code: "INTERNAL_ERROR",
     });
   }

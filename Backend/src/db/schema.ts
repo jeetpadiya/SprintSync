@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, boolean, integer, doublePrecision } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // 1. Users Table
@@ -66,6 +66,80 @@ export const workspaceInvitations = pgTable("workspace_invitations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// 6. Teams Table (e.g. Engineering -> key: "ENG")
+export const teams = pgTable("teams", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .references(() => workspaces.id, { onDelete: "cascade" })
+    .notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  key: varchar("key", { length: 10 }).notNull(), // e.g. "ENG"
+  issueCounter: integer("issue_counter").default(0).notNull(), // Atomically incremented for issue numbers
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// 7. Labels Table
+export const labels = pgTable("labels", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .references(() => workspaces.id, { onDelete: "cascade" })
+    .notNull(),
+  name: varchar("name", { length: 50 }).notNull(),
+  color: varchar("color", { length: 30 }).default("#8a8f98").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 8. Issues Table
+export const issues = pgTable("issues", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .references(() => workspaces.id, { onDelete: "cascade" })
+    .notNull(),
+  teamId: uuid("teamId")
+    .references(() => teams.id, { onDelete: "cascade" })
+    .notNull(),
+  number: integer("number").notNull(), // e.g. 101
+  identifier: varchar("identifier", { length: 50 }).notNull(), // e.g. "ENG-101"
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).default("TODO").notNull(), // BACKLOG, TODO, IN_PROGRESS, IN_REVIEW, DONE, CANCELED
+  priority: varchar("priority", { length: 50 }).default("NO_PRIORITY").notNull(), // NO_PRIORITY, LOW, MEDIUM, HIGH, URGENT
+  estimate: integer("estimate"), // 1, 2, 3, 5, 8 (Fibonacci)
+  sortOrder: doublePrecision("sort_order").default(0).notNull(),
+  assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
+  creatorId: uuid("creator_id").references(() => users.id, { onDelete: "set null" }),
+  parentId: uuid("parent_id"), // Parent issue if sub-issue
+  dueDate: timestamp("due_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// 9. Issue Labels Mapping Table
+export const issueLabels = pgTable("issue_labels", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  issueId: uuid("issue_id")
+    .references(() => issues.id, { onDelete: "cascade" })
+    .notNull(),
+  labelId: uuid("label_id")
+    .references(() => labels.id, { onDelete: "cascade" })
+    .notNull(),
+});
+
+// 10. Issue Relations Table (blocks, blocked_by, duplicate, related)
+export const issueRelations = pgTable("issue_relations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sourceIssueId: uuid("source_issue_id")
+    .references(() => issues.id, { onDelete: "cascade" })
+    .notNull(),
+  targetIssueId: uuid("target_issue_id")
+    .references(() => issues.id, { onDelete: "cascade" })
+    .notNull(),
+  type: varchar("type", { length: 30 }).notNull(), // BLOCKS, BLOCKED_BY, DUPLICATE, RELATED
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
@@ -105,3 +179,13 @@ export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
 export type NewWorkspaceMember = typeof workspaceMembers.$inferInsert;
 export type WorkspaceInvitation = typeof workspaceInvitations.$inferSelect;
 export type NewWorkspaceInvitation = typeof workspaceInvitations.$inferInsert;
+export type Team = typeof teams.$inferSelect;
+export type NewTeam = typeof teams.$inferInsert;
+export type Label = typeof labels.$inferSelect;
+export type NewLabel = typeof labels.$inferInsert;
+export type Issue = typeof issues.$inferSelect;
+export type NewIssue = typeof issues.$inferInsert;
+export type IssueLabel = typeof issueLabels.$inferSelect;
+export type NewIssueLabel = typeof issueLabels.$inferInsert;
+export type IssueRelation = typeof issueRelations.$inferSelect;
+export type NewIssueRelation = typeof issueRelations.$inferInsert;

@@ -9,8 +9,8 @@ This document outlines the **non-negotiable core features** of SprintSync (Linea
 | Feature | Scope | Priority | Status |
 | :--- | :--- | :--- | :--- |
 | **1. Authentication & Session** | HttpOnly cookies, JWT rotation, user profile | **P0** | ✅ Completed |
-| **2. Issue Management Core** | Identifiers (`ENG-101`), statuses, priorities, estimates | **P0** | ⏳ Next Up |
-| **3. Dual Views (Board & List)** | Drag-and-drop Kanban + high-density virtualized list | **P0** | 🔲 Planned |
+| **2. Issue Management Core** | Identifiers (`ENG-101`), statuses, priorities, estimates | **P0** | ✅ Completed |
+| **3. Dual Views (Board & List)** | Drag-and-drop Kanban + high-density virtualized list | **P0** | ⏳ Next Up |
 | **4. Keyboard Navigation & `Cmd+K`** | Global hotkeys (`C`, `J`, `K`) + command palette | **P0** | 🔲 Planned |
 | **5. Cycles (Sprints Engine)** | Automated sprint cadence + backlog rollover | **P0** | 🔲 Planned |
 | **6. Optimistic UI Layer** | Sub-50ms local cache updates with rollback | **P0** | 🔲 Planned |
@@ -31,7 +31,7 @@ This document outlines the **non-negotiable core features** of SprintSync (Linea
 
 ---
 
-## Feature 2: Issue Management Core (P0)
+## Feature 2: Issue Management Core (P0) — ✅ Done
 The atomic unit of work in SprintSync.
 
 ### Requirements:
@@ -53,10 +53,12 @@ The atomic unit of work in SprintSync.
 - **Hierarchy & Relations**: Parent issue $\leftrightarrow$ Sub-issues; Relations (`blocks`, `blocked by`, `duplicate`).
 
 ### Implementation Checklist:
-- [ ] Database tables: `teams`, `issues`, `labels`, `issue_labels`
-- [ ] Backend CRUD API: `GET /api/issues`, `POST /api/issues`, `PATCH /api/issues/:id`, `DELETE /api/issues/:id`
-- [ ] Atomic team issue counter incrementation (`ENG-101`)
-- [ ] Issue detail modal / drawer component
+- [x] Database tables: `teams`, `issues`, `labels`, `issue_labels`, `issue_relations`
+- [x] Backend CRUD API: `GET /api/issues`, `GET /api/issues/:id`, `POST /api/issues`, `PATCH /api/issues/:id`, `DELETE /api/issues/:id`, `POST/DELETE /api/issues/:id/relations`
+- [x] Atomic team issue counter incrementation (`ENG-101`)
+- [x] Issue creation modal / dialog component with shortcut (`C`), Status/Priority/Assignee/Labels pills, Estimate, Due Date, and `Create more`
+- [x] Linear design token icons for 6 Statuses and 5 Priorities
+- [x] Sub-issues (`parentId` linking + progress) and Relations (`blocks`, `blocked by`, `duplicate`, `related`) UI in Issue Inspector
 
 ---
 
