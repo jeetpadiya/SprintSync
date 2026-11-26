@@ -8,7 +8,7 @@ import { getPostAuthPath } from "@/lib/auth-routing";
 import { WorkspaceDashboard } from "@/features/workspaces/components/workspace-dashboard";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { ArrowRight, CheckCircle2, Terminal, Cpu } from "lucide-react";
+import { ArrowRight, CheckCircle2, Terminal, Cpu, Loader2 } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -23,8 +23,17 @@ export default function Home() {
     }
   }, [isAuthenticated, user, isLoading, router]);
 
+  // Prevent landing-page flash while AuthHydration checks/refreshes the cookie session
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] text-[var(--text-3)]">
+        <Loader2 className="h-5 w-5 animate-spin" strokeWidth={1.5} />
+      </div>
+    );
+  }
+
   // If user is authenticated and setup is completed, render the full workspace dashboard
-  if (!isLoading && isAuthenticated) {
+  if (isAuthenticated) {
     return <WorkspaceDashboard />;
   }
 

@@ -1,9 +1,10 @@
 /**
  * Centralized API endpoints registry.
- * All API routes across domains are registered here.
+ * Uses same-origin `/api` (proxied via next.config.ts rewrites) by default so HttpOnly cookies
+ * attach consistently across localhost, 127.0.0.1, and Next.js proxy.ts.
  */
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export const ENDPOINTS = {
   AUTH: {
@@ -16,8 +17,12 @@ export const ENDPOINTS = {
   },
   WORKSPACES: {
     CREATE: `${API_BASE_URL}/workspaces`,
+    MEMBERS: `${API_BASE_URL}/workspaces/members`,
     INVITE: `${API_BASE_URL}/workspaces/invite`,
   },
+  TEAMS: `${API_BASE_URL}/teams`,
+  ISSUES: `${API_BASE_URL}/issues`,
+  LABELS: `${API_BASE_URL}/labels`,
   HEALTH: `${API_BASE_URL}/health`,
   USERS: `${API_BASE_URL}/users`,
 } as const;

@@ -20,8 +20,8 @@ function AuthHydration({ children }: { children: React.ReactNode }) {
     authApi
       .getMe()
       .then((res) => {
-        if (isMounted && res.user) {
-          setUser(res.user);
+        if (isMounted) {
+          setUser(res.user ?? null);
         }
       })
       .catch(() => {

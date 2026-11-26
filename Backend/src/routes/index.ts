@@ -1,6 +1,9 @@
 import { Router, Request, Response } from "express";
 import authRoutes from "./authRoutes.js";
 import workspaceRoutes from "./workspaceRoutes.js";
+import teamRoutes from "./teamRoutes.js";
+import issueRoutes from "./issueRoutes.js";
+import labelRoutes from "./labelRoutes.js";
 import { db } from "../db/db.js";
 import { users } from "../db/schema.js";
 
@@ -16,6 +19,15 @@ router.use("/auth", authRoutes);
 
 // Workspace Routes: /api/workspaces/*
 router.use("/workspaces", workspaceRoutes);
+
+// Teams Routes: /api/teams/*
+router.use("/teams", teamRoutes);
+
+// Issue Routes: /api/issues/*
+router.use("/issues", issueRoutes);
+
+// Label Routes: /api/labels/*
+router.use("/labels", labelRoutes);
 
 // Users test endpoint: GET /api/users
 router.get("/users", async (_req: Request, res: Response) => {

@@ -1,7 +1,12 @@
 import { Response } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "../db/db.js";
-import { workspaces, workspaceMembers, workspaceInvitations } from "../db/schema.js";
+import {
+  workspaces,
+  workspaceMembers,
+  workspaceInvitations,
+  users,
+} from "../db/schema.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { createWorkspaceSchema, inviteTeammatesSchema } from "../utils/workspaceSchemas.js";
 
@@ -190,6 +195,62 @@ export const inviteTeammates = async (
     console.error("Invite teammates error:", error);
     return res.status(500).json({
       error: "Internal server error while sending invitations",
+      code: "INTERNAL_ERROR",
+    });
+  }
+};
+
+/**
+ * GET /api/workspaces/members
+ * Retrieves all members of the active workspace for issue assignment pickers.
+ */
+export const getWorkspaceMembers = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void | Response> => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({
+        error: "Authentication required",
+        code: "UNAUTHORIZED",
+      });
+    }
+
+    let workspaceId = req.query.workspaceId as string | undefined;
+
+    if (!workspaceId) {
+      const [membership] = await db
+        .select({ workspaceId: workspaceMembers.workspaceId })
+        .from(workspaceMembers)
+        .where(eq(workspaceMembers.userId, req.user.id))
+        .limit(1);
+
+      if (!membership) {
+        return res.status(200).json({ success: true, members: [] });
+      }
+      workspaceId = membership.workspaceId;
+    }
+
+    const members = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        avatarUrl: users.avatarUrl,
+        role: workspaceMembers.role,
+      })
+      .from(workspaceMembers)
+      .innerJoin(users, eq(users.id, workspaceMembers.userId))
+      .where(eq(workspaceMembers.workspaceId, workspaceId));
+
+    return res.status(200).json({
+      success: true,
+      members,
+    });
+  } catch (error) {
+    console.error("Get workspace members error:", error);
+    return res.status(500).json({
+      error: "Internal server error while fetching workspace members",
       code: "INTERNAL_ERROR",
     });
   }

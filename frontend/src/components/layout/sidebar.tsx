@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useModalStore } from "@/store/useModalStore";
 import {
   Inbox,
   CircleDot,
@@ -19,11 +21,15 @@ import {
 } from "lucide-react";
 
 export function Sidebar() {
+  const pathname = usePathname();
   const { user } = useAuthStore();
-  const [activeItem, setActiveItem] = useState("inbox");
+  const { openCreateIssue } = useModalStore();
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [teamsOpen, setTeamsOpen] = useState(false);
   const [tryOpen, setTryOpen] = useState(false);
+
+  const isInboxActive = pathname === "/" || pathname === "/dashboard";
+  const isMyIssuesActive = pathname.startsWith("/my-issues");
 
   const workspaceName = user?.workspaces?.[0]?.name || "Jeet22";
   const workspaceInitial = workspaceName.charAt(0).toUpperCase() || "J";
@@ -56,6 +62,7 @@ export function Sidebar() {
           <button
             type="button"
             title="New issue (C)"
+            onClick={() => openCreateIssue()}
             className="flex h-6 w-6 items-center justify-center rounded-[var(--radius)] text-[var(--text-4)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] transition-colors duration-100 ease-out cursor-pointer"
           >
             <SquarePen className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -66,42 +73,35 @@ export function Sidebar() {
       {/* Primary Navigation */}
       <nav className="flex-1 space-y-0.5 px-2 py-1 overflow-y-auto">
         {/* Item: Inbox */}
-        <button
-          type="button"
-          onClick={() => setActiveItem("inbox")}
+        <Link
+          href="/"
           className={`flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] transition-colors duration-100 ease-out cursor-pointer ${
-            activeItem === "inbox"
+            isInboxActive
               ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
               : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
           }`}
         >
           <Inbox className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
           <span>Inbox</span>
-        </button>
+        </Link>
 
         {/* Item: My Issues */}
-        <button
-          type="button"
-          onClick={() => setActiveItem("my-issues")}
+        <Link
+          href="/my-issues"
           className={`flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] transition-colors duration-100 ease-out cursor-pointer ${
-            activeItem === "my-issues"
+            isMyIssuesActive
               ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
               : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
           }`}
         >
           <CircleDot className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
           <span>My Issues</span>
-        </button>
+        </Link>
 
         {/* Item: Reviews */}
         <button
           type="button"
-          onClick={() => setActiveItem("reviews")}
-          className={`flex h-7 w-full items-center justify-between rounded-[var(--radius)] px-2 text-[13px] transition-colors duration-100 ease-out cursor-pointer ${
-            activeItem === "reviews"
-              ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
-              : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
-          }`}
+          className="flex h-7 w-full items-center justify-between rounded-[var(--radius)] px-2 text-[13px] text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] transition-colors duration-100 ease-out cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <GitPullRequest className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
@@ -114,12 +114,7 @@ export function Sidebar() {
         {/* Item: Documents */}
         <button
           type="button"
-          onClick={() => setActiveItem("documents")}
-          className={`flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] transition-colors duration-100 ease-out cursor-pointer ${
-            activeItem === "documents"
-              ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
-              : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
-          }`}
+          className="flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] transition-colors duration-100 ease-out cursor-pointer"
         >
           <FileText className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
           <span>Documents</span>
@@ -128,12 +123,7 @@ export function Sidebar() {
         {/* Item: Agent */}
         <button
           type="button"
-          onClick={() => setActiveItem("agent")}
-          className={`flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] transition-colors duration-100 ease-out cursor-pointer ${
-            activeItem === "agent"
-              ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
-              : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
-          }`}
+          className="flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] transition-colors duration-100 ease-out cursor-pointer"
         >
           <Sparkles className="h-3.5 w-3.5 shrink-0 text-[var(--text-3)]" strokeWidth={1.5} />
           <span>Agent</span>
