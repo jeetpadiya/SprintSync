@@ -23,6 +23,7 @@ export const ENDPOINTS = {
   TEAMS: `${API_BASE_URL}/teams`,
   ISSUES: `${API_BASE_URL}/issues`,
   LABELS: `${API_BASE_URL}/labels`,
+  DOCUMENTS: `${API_BASE_URL}/documents`,
   HEALTH: `${API_BASE_URL}/health`,
   USERS: `${API_BASE_URL}/users`,
 } as const;

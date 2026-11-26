@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, boolean, integer, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, boolean, integer, doublePrecision, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // 1. Users Table
@@ -140,6 +140,22 @@ export const issueRelations = pgTable("issue_relations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// 11. Documents Table (Linear-style collaborative specs & notes with Tiptap JSON tree)
+export const documents = pgTable("documents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .references(() => workspaces.id, { onDelete: "cascade" })
+    .notNull(),
+  teamId: uuid("team_id").references(() => teams.id, { onDelete: "set null" }),
+  title: varchar("title", { length: 255 }).default("Untitled").notNull(),
+  icon: varchar("icon", { length: 30 }),
+  content: jsonb("content"), // Tiptap JSON document tree
+  creatorId: uuid("creator_id").references(() => users.id, { onDelete: "set null" }),
+  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
@@ -189,3 +205,5 @@ export type IssueLabel = typeof issueLabels.$inferSelect;
 export type NewIssueLabel = typeof issueLabels.$inferInsert;
 export type IssueRelation = typeof issueRelations.$inferSelect;
 export type NewIssueRelation = typeof issueRelations.$inferInsert;
+export type Document = typeof documents.$inferSelect;
+export type NewDocument = typeof documents.$inferInsert;

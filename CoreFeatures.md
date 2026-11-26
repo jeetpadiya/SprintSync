@@ -15,7 +15,7 @@ This document outlines the **non-negotiable core features** of SprintSync (Linea
 | **5. Cycles (Sprints Engine)** | Automated sprint cadence + backlog rollover | **P0** | 🔲 Planned |
 | **6. Optimistic UI Layer** | Sub-50ms local cache updates with rollback | **P0** | 🔲 Planned |
 | **7. Projects & Initiatives** | Milestones, health statuses, progress tracking | **P1** | 🔲 Planned |
-| **8. Tiptap Markdown Editor** | Task checklists, slash commands (`/`), auto-save | **P1** | 🔲 Planned |
+| **8. Tiptap Markdown Editor** | Task checklists, slash commands (`/`), auto-save | **P1** | ✅ Completed |
 | **9. Real-Time Collaboration** | WebSocket sync (Socket.io) for live changes | **P1** | 🔲 Planned |
 
 ---
@@ -165,9 +165,9 @@ Linear-grade issue descriptions and discussion threads.
 - Zero manual saving: debounced auto-save.
 
 ### Implementation Checklist:
-- [ ] Tiptap editor wrapper with custom toolbar
-- [ ] JSON document tree persistence in PostgreSQL `jsonb` column
-- [ ] Auto-save hook with debounce
+- [x] Tiptap editor wrapper with custom toolbar & slash commands (`/`)
+- [x] JSON document tree persistence in PostgreSQL `jsonb` column
+- [x] Auto-save hook with debounce
 
 ---
 

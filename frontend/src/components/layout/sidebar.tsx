@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { authApi } from "@/features/auth/api/auth-api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useModalStore } from "@/store/useModalStore";
 import {
@@ -18,37 +21,235 @@ import {
   FolderKanban,
   Users2,
   HelpCircle,
+  Check,
+  Plus,
 } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuthStore();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { user, clearAuth } = useAuthStore();
   const { openCreateIssue } = useModalStore();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [switchWorkspaceOpen, setSwitchWorkspaceOpen] = useState(false);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(
+    null
+  );
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [teamsOpen, setTeamsOpen] = useState(false);
   const [tryOpen, setTryOpen] = useState(false);
 
+  const menuContainerRef = useRef<HTMLDivElement>(null);
+
   const isInboxActive = pathname === "/" || pathname === "/dashboard";
   const isMyIssuesActive = pathname.startsWith("/my-issues");
+  const isReviewsActive = pathname.startsWith("/reviews");
+  const isDocumentsActive = pathname.startsWith("/documents");
+  const isAgentActive = pathname.startsWith("/agent");
 
-  const workspaceName = user?.workspaces?.[0]?.name || "Jeet22";
-  const workspaceInitial = workspaceName.charAt(0).toUpperCase() || "J";
+  const workspaces = user?.workspaces ?? [];
+  const activeWorkspace =
+    workspaces.find((w) => w.id === activeWorkspaceId) ?? workspaces[0];
+  const workspaceName = activeWorkspace?.name || user?.name || "Workspace";
+  const workspaceMonogram =
+    workspaceName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "W";
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        menuContainerRef.current &&
+        !menuContainerRef.current.contains(e.target as Node)
+      ) {
+        setMenuOpen(false);
+        setSwitchWorkspaceOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setSwitchWorkspaceOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await authApi.logout();
+    } catch {
+      // Clear local session even if request fails
+    } finally {
+      setMenuOpen(false);
+      setSwitchWorkspaceOpen(false);
+      queryClient.clear();
+      clearAuth();
+      toast.success("Logged out");
+      router.replace("/login");
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <aside className="flex h-screen w-[220px] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--bg)] text-[var(--text)] select-none">
       {/* Workspace Switcher & Top Bar Actions */}
-      <div className="flex h-11 items-center justify-between px-3 border-b border-transparent">
+      <div
+        ref={menuContainerRef}
+        className="relative flex h-11 items-center justify-between px-3 border-b border-transparent"
+      >
         <button
           type="button"
-          className="flex items-center gap-2 rounded-[var(--radius)] px-1.5 py-1 text-[13px] font-medium text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors duration-100 ease-out cursor-pointer group"
+          onClick={() => {
+            setMenuOpen((v) => !v);
+            setSwitchWorkspaceOpen(false);
+          }}
+          className={`flex items-center gap-2 rounded-[var(--radius)] px-1.5 py-1 text-[13px] font-medium text-[var(--text)] transition-colors duration-100 ease-out cursor-pointer group ${
+            menuOpen ? "bg-[var(--bg-elev)]" : "hover:bg-[var(--bg-hover)]"
+          }`}
         >
-          {/* Workspace Avatar Badge (matching screenshot purple badge) */}
-          <div className="flex h-4 w-4 items-center justify-center rounded-[3px] bg-[#6366f1] text-[10px] font-medium text-white">
-            {workspaceInitial}
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] bg-[#10b981] text-[10px] font-semibold text-[#052e16]">
+            {workspaceMonogram}
           </div>
-          <span className="truncate max-w-[105px] tracking-tight">{workspaceName}</span>
+          <span className="truncate max-w-[100px] tracking-tight">
+            {workspaceName}
+          </span>
           <ChevronDown className="h-3 w-3 text-[var(--text-4)] group-hover:text-[var(--text-3)] transition-colors duration-100" />
         </button>
+
+        {/* Workspace / Account Popup Menu */}
+        {menuOpen && (
+          <div className="absolute left-2.5 top-11 z-50 w-[240px] rounded-[10px] border border-[var(--border-strong)] bg-[var(--bg-panel)] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.65)]">
+            <div className="space-y-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.push("/settings");
+                }}
+                className="flex h-8 w-full items-center justify-between rounded-[6px] px-2.5 text-[13px] text-[var(--text)] hover:bg-[rgba(255,255,255,0.08)] transition-colors cursor-pointer"
+              >
+                <span>Settings</span>
+                <span className="text-[11px] text-[var(--text-4)]">
+                  G then S
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.push("/settings?tab=members");
+                }}
+                className="flex h-8 w-full items-center justify-between rounded-[6px] px-2.5 text-[13px] text-[var(--text-2)] hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--text)] transition-colors cursor-pointer"
+              >
+                <span>Invite and manage members</span>
+              </button>
+            </div>
+
+            <div className="my-1.5 border-t border-[var(--border)]" />
+
+            <div className="space-y-0.5">
+              {/* Switch workspace (with submenu) */}
+              <div
+                className="relative"
+                onMouseEnter={() => setSwitchWorkspaceOpen(true)}
+                onMouseLeave={() => setSwitchWorkspaceOpen(false)}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSwitchWorkspaceOpen((v) => !v)}
+                  className="flex h-8 w-full items-center justify-between rounded-[6px] px-2.5 text-[13px] text-[var(--text-2)] hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--text)] transition-colors cursor-pointer"
+                >
+                  <span>Switch workspace</span>
+                  <span className="flex items-center gap-1.5 text-[11px] text-[var(--text-4)]">
+                    <span>O then W</span>
+                    <span className="text-[10px]">&#9656;</span>
+                  </span>
+                </button>
+
+                {switchWorkspaceOpen && (
+                  <div className="absolute left-full top-0 ml-1.5 z-50 w-56 rounded-[10px] border border-[var(--border-strong)] bg-[var(--bg-panel)] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.65)]">
+                    <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-[var(--text-4)]">
+                      {user?.email || "Workspaces"}
+                    </div>
+
+                    {workspaces.length === 0 ? (
+                      <div className="px-2 py-1.5 text-[12px] text-[var(--text-4)]">
+                        No workspaces
+                      </div>
+                    ) : (
+                      workspaces.map((ws) => {
+                        const isCurrent = ws.id === activeWorkspace?.id;
+                        return (
+                          <button
+                            key={ws.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveWorkspaceId(ws.id);
+                              setSwitchWorkspaceOpen(false);
+                              setMenuOpen(false);
+                              toast.success(`Switched to ${ws.name}`);
+                            }}
+                            className="flex h-8 w-full items-center justify-between rounded-[6px] px-2 text-[12px] text-[var(--text-2)] hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--text)] cursor-pointer"
+                          >
+                            <span className="truncate">{ws.name}</span>
+                            {isCurrent && (
+                              <Check className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
+
+                    <div className="my-1 border-t border-[var(--border)]" />
+                    <Link
+                      href="/create-workspace"
+                      onClick={() => {
+                        setSwitchWorkspaceOpen(false);
+                        setMenuOpen(false);
+                      }}
+                      className="flex h-8 w-full items-center gap-2 rounded-[6px] px-2 text-[12px] text-[var(--text-3)] hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--text)]"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Create workspace</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={isLoggingOut}
+                onClick={handleLogout}
+                className="flex h-8 w-full items-center justify-between rounded-[6px] px-2.5 text-[13px] text-[var(--text-2)] hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--text)] transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <span>{isLoggingOut ? "Logging out..." : "Log out"}</span>
+                <span className="text-[11px] text-[var(--text-4)]">
+                  Alt &#8679; Q
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions (Search & Quick Create) */}
         <div className="flex items-center gap-0.5">
@@ -99,9 +300,13 @@ export function Sidebar() {
         </Link>
 
         {/* Item: Reviews */}
-        <button
-          type="button"
-          className="flex h-7 w-full items-center justify-between rounded-[var(--radius)] px-2 text-[13px] text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] transition-colors duration-100 ease-out cursor-pointer"
+        <Link
+          href="/reviews"
+          className={`flex h-7 w-full items-center justify-between rounded-[var(--radius)] px-2 text-[13px] transition-colors duration-100 ease-out cursor-pointer ${
+            isReviewsActive
+              ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
+              : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
+          }`}
         >
           <div className="flex items-center gap-2">
             <GitPullRequest className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
@@ -109,25 +314,33 @@ export function Sidebar() {
           </div>
           {/* Subtle notification dot on reviews */}
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-4)]" />
-        </button>
+        </Link>
 
         {/* Item: Documents */}
-        <button
-          type="button"
-          className="flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] transition-colors duration-100 ease-out cursor-pointer"
+        <Link
+          href="/documents"
+          className={`flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] transition-colors duration-100 ease-out cursor-pointer ${
+            isDocumentsActive
+              ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
+              : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
+          }`}
         >
           <FileText className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
           <span>Documents</span>
-        </button>
+        </Link>
 
         {/* Item: Agent */}
-        <button
-          type="button"
-          className="flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] transition-colors duration-100 ease-out cursor-pointer"
+        <Link
+          href="/agent"
+          className={`flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] transition-colors duration-100 ease-out cursor-pointer ${
+            isAgentActive
+              ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
+              : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
+          }`}
         >
           <Sparkles className="h-3.5 w-3.5 shrink-0 text-[var(--text-3)]" strokeWidth={1.5} />
           <span>Agent</span>
-        </button>
+        </Link>
 
         {/* Section: Workspace */}
         <div className="pt-4">

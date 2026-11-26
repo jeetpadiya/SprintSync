@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
+import { IssueInspector } from "@/features/issues/components/issue-inspector";
 import { useIssues } from "@/features/issues/hooks/use-issues";
-import { IssueStatusIcon, STATUS_LABELS } from "@/components/ui/issue-status-icon";
-import { IssuePriorityIcon, PRIORITY_LABELS } from "@/components/ui/issue-priority-icon";
+import { IssueStatusIcon } from "@/components/ui/issue-status-icon";
+import { IssuePriorityIcon } from "@/components/ui/issue-priority-icon";
 import {
   MoreHorizontal,
   Archive,
@@ -12,7 +13,6 @@ import {
   Settings2,
   Layers,
   Plus,
-  Hash,
 } from "lucide-react";
 import { useModalStore } from "@/store/useModalStore";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -165,59 +165,12 @@ export function WorkspaceDashboard() {
               </div>
             </div>
           ) : selectedIssue ? (
-            <div className="max-w-2xl space-y-6">
-              <div className="flex items-center gap-3 text-[12px] text-[var(--text-4)]">
-                <span className="font-medium text-[var(--text-3)]">
-                  {selectedIssue.identifier}
-                </span>
-                <span>•</span>
-                <span>Created {new Date(selectedIssue.createdAt).toLocaleDateString()}</span>
-              </div>
-
-              <h1 className="text-[20px] font-medium text-[var(--text)] tracking-tight leading-snug">
-                {selectedIssue.title}
-              </h1>
-
-              <div className="flex flex-wrap items-center gap-2 pt-1 pb-4 border-b border-[var(--border)]">
-                <div className="flex items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-elev)] px-2.5 py-1 text-[12px]">
-                  <IssueStatusIcon status={selectedIssue.status} className="h-3.5 w-3.5" />
-                  <span>{STATUS_LABELS[selectedIssue.status]}</span>
-                </div>
-
-                <div className="flex items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-elev)] px-2.5 py-1 text-[12px]">
-                  <IssuePriorityIcon priority={selectedIssue.priority} className="h-3.5 w-3.5" />
-                  <span>{PRIORITY_LABELS[selectedIssue.priority]}</span>
-                </div>
-
-                {selectedIssue.estimate !== null && selectedIssue.estimate !== undefined && (
-                  <div className="flex items-center gap-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-elev)] px-2 py-1 text-[12px] text-[var(--text-3)]">
-                    <Hash className="h-3 w-3 text-[var(--text-4)]" />
-                    <span>{selectedIssue.estimate} pts</span>
-                  </div>
-                )}
-
-                {selectedIssue.labels?.map((lbl) => (
-                  <div
-                    key={lbl.id}
-                    className="flex items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-elev)] px-2 py-1 text-[12px]"
-                  >
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: lbl.color }}
-                    />
-                    <span>{lbl.name}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="text-[13px] text-[var(--text-2)] leading-relaxed whitespace-pre-wrap">
-                {selectedIssue.description || (
-                  <span className="text-[var(--text-4)] italic">
-                    No description provided.
-                  </span>
-                )}
-              </div>
-            </div>
+            <IssueInspector
+              issueId={selectedIssue.id}
+              onSelectIssue={(id) => setSelectedIssueId(id)}
+              onDeleted={() => setSelectedIssueId("welcome")}
+              className="max-w-2xl space-y-5"
+            />
           ) : null}
         </div>
       </div>

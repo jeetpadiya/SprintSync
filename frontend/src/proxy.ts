@@ -4,6 +4,10 @@ import type { NextRequest } from "next/server";
 const PROTECTED_ROUTES = [
   "/dashboard",
   "/my-issues",
+  "/reviews",
+  "/documents",
+  "/agent",
+  "/settings",
   "/onboarding",
   "/create-workspace",
 ];
