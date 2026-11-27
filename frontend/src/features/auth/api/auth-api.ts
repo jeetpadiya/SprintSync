@@ -31,6 +31,15 @@ export const authApi = {
     });
   },
 
+  logoutAll: (): Promise<{ success: boolean; message: string }> => {
+    return apiClient<{ success: boolean; message: string }>(
+      `${ENDPOINTS.AUTH.LOGOUT}-all`,
+      {
+        method: "POST",
+      }
+    );
+  },
+
   getMe: (): Promise<{ success: boolean; user: User }> => {
     return apiClient<{ success: boolean; user: User }>(ENDPOINTS.AUTH.ME, {
       method: "GET",

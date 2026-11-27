@@ -82,6 +82,17 @@ export const issuesApi = {
     });
   },
 
+  createTeam: (data: {
+    name: string;
+    key: string;
+    workspaceId?: string;
+  }): Promise<{ success: boolean; team: Team }> => {
+    return apiClient<{ success: boolean; team: Team }>(ENDPOINTS.TEAMS, {
+      method: "POST",
+      data,
+    });
+  },
+
   getLabels: (workspaceId?: string): Promise<{ success: boolean; labels: Label[] }> => {
     const url = workspaceId
       ? `${ENDPOINTS.LABELS}?workspaceId=${workspaceId}`

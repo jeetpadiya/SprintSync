@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { authApi } from "@/features/auth/api/auth-api";
+import { useCreateTeam, useTeams } from "@/features/issues/hooks/use-issues";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useModalStore } from "@/store/useModalStore";
 import {
@@ -19,18 +20,23 @@ import {
   Search,
   SquarePen,
   FolderKanban,
+  Layers,
+  MoreHorizontal,
   Users2,
   HelpCircle,
   Check,
   Plus,
+  Settings,
 } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, clearAuth } = useAuthStore();
-  const { openCreateIssue } = useModalStore();
+  const { user, clearAuth, isAuthenticated } = useAuthStore();
+  const { openCreateIssue, openCommandMenu } = useModalStore();
+  const { data: teams = [] } = useTeams(undefined, isAuthenticated);
+  const createTeam = useCreateTeam();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [switchWorkspaceOpen, setSwitchWorkspaceOpen] = useState(false);
@@ -39,8 +45,12 @@ export function Sidebar() {
   );
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const [workspaceOpen, setWorkspaceOpen] = useState(false);
-  const [teamsOpen, setTeamsOpen] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(true);
+  const [teamsOpen, setTeamsOpen] = useState(true);
+  const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
+  const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamKey, setNewTeamKey] = useState("");
   const [tryOpen, setTryOpen] = useState(false);
 
   const menuContainerRef = useRef<HTMLDivElement>(null);
@@ -50,6 +60,8 @@ export function Sidebar() {
   const isReviewsActive = pathname.startsWith("/reviews");
   const isDocumentsActive = pathname.startsWith("/documents");
   const isAgentActive = pathname.startsWith("/agent");
+  const isProjectsActive = pathname.startsWith("/projects");
+  const isViewsActive = pathname.startsWith("/views");
 
   const workspaces = user?.workspaces ?? [];
   const activeWorkspace =
@@ -251,11 +263,23 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Quick Actions (Search & Quick Create) */}
+        {/* Quick Actions (Settings, Search & Quick Create) */}
         <div className="flex items-center gap-0.5">
+          <Link
+            href="/settings"
+            title="Settings"
+            className={`flex h-6 w-6 items-center justify-center rounded-[var(--radius)] transition-colors duration-100 ease-out cursor-pointer ${
+              pathname.startsWith("/settings")
+                ? "bg-[rgba(255,255,255,0.08)] text-[var(--text)]"
+                : "text-[var(--text-4)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
+            }`}
+          >
+            <Settings className="h-3.5 w-3.5" strokeWidth={1.5} />
+          </Link>
           <button
             type="button"
             title="Search (Cmd+K)"
+            onClick={() => openCommandMenu("root")}
             className="flex h-6 w-6 items-center justify-center rounded-[var(--radius)] text-[var(--text-4)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] transition-colors duration-100 ease-out cursor-pointer"
           >
             <Search className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -357,13 +381,37 @@ export function Sidebar() {
             />
           </button>
           {workspaceOpen && (
-            <div className="pl-4 pr-1 py-1 space-y-0.5">
+            <div className="pl-2 pr-1 py-1 space-y-0.5">
+              <Link
+                href="/projects"
+                className={`flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] transition-colors cursor-pointer ${
+                  isProjectsActive
+                    ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
+                    : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
+                }`}
+              >
+                <FolderKanban className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+                <span>Projects</span>
+              </Link>
+
+              <Link
+                href="/views"
+                className={`flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] transition-colors cursor-pointer ${
+                  isViewsActive
+                    ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
+                    : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
+                }`}
+              >
+                <Layers className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+                <span>Views</span>
+              </Link>
+
               <button
                 type="button"
-                className="flex h-6 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[12px] text-[var(--text-4)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] cursor-pointer"
+                className="flex h-7 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[13px] text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] transition-colors cursor-pointer"
               >
-                <FolderKanban className="h-3 w-3" strokeWidth={1.5} />
-                <span>Projects</span>
+                <MoreHorizontal className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+                <span>More</span>
               </button>
             </div>
           )}
@@ -371,27 +419,175 @@ export function Sidebar() {
 
         {/* Section: Your teams */}
         <div className="pt-2">
-          <button
-            type="button"
-            onClick={() => setTeamsOpen(!teamsOpen)}
-            className="flex h-6 w-full items-center gap-1.5 rounded-[var(--radius)] px-2 text-[12px] font-medium text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors duration-100 ease-out cursor-pointer"
-          >
-            <span>Your teams</span>
-            <ChevronRight
-              className={`h-3 w-3 text-[var(--text-4)] transition-transform duration-150 ${
-                teamsOpen ? "rotate-90" : ""
-              }`}
-            />
-          </button>
+          <div className="flex items-center justify-between pr-1">
+            <button
+              type="button"
+              onClick={() => setTeamsOpen(!teamsOpen)}
+              className="flex h-6 flex-1 items-center gap-1.5 rounded-[var(--radius)] px-2 text-[12px] font-medium text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors duration-100 ease-out cursor-pointer"
+            >
+              <span>Your teams</span>
+              <ChevronRight
+                className={`h-3 w-3 text-[var(--text-4)] transition-transform duration-150 ${
+                  teamsOpen ? "rotate-90" : ""
+                }`}
+              />
+            </button>
+            <button
+              type="button"
+              title="Create team"
+              onClick={() => {
+                setTeamsOpen(true);
+                setIsCreatingTeam((v) => !v);
+              }}
+              className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-4)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] cursor-pointer"
+            >
+              <Plus className="h-3 w-3" strokeWidth={1.75} />
+            </button>
+          </div>
+
           {teamsOpen && (
-            <div className="pl-4 pr-1 py-1 space-y-0.5">
-              <button
-                type="button"
-                className="flex h-6 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[12px] text-[var(--text-4)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] cursor-pointer"
-              >
-                <Users2 className="h-3 w-3" strokeWidth={1.5} />
-                <span>Engineering</span>
-              </button>
+            <div className="pl-2 pr-1 py-1 space-y-0.5">
+              {isCreatingTeam && (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!newTeamName.trim() || !newTeamKey.trim()) return;
+                    try {
+                      const res = await createTeam.mutateAsync({
+                        name: newTeamName.trim(),
+                        key: newTeamKey.trim().toUpperCase(),
+                      });
+                      setNewTeamName("");
+                      setNewTeamKey("");
+                      setIsCreatingTeam(false);
+                      if (res.team?.key) {
+                        router.push(`/team/${res.team.key}/issues`);
+                      }
+                    } catch {
+                      // Handled by useCreateTeam
+                    }
+                  }}
+                  className="mb-1.5 space-y-1.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-panel)] p-2"
+                >
+                  <input
+                    type="text"
+                    autoFocus
+                    value={newTeamName}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNewTeamName(v);
+                      setNewTeamKey(
+                        v
+                          .replace(/[^a-zA-Z0-9]/g, "")
+                          .slice(0, 3)
+                          .toUpperCase()
+                      );
+                    }}
+                    placeholder="Team name (e.g. Design)"
+                    className="h-6 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-2 text-[11px] text-[var(--text)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent)]"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={newTeamKey}
+                      maxLength={10}
+                      onChange={(e) =>
+                        setNewTeamKey(
+                          e.target.value
+                            .replace(/[^a-zA-Z0-9]/g, "")
+                            .toUpperCase()
+                        )
+                      }
+                      placeholder="DES"
+                      className="h-6 w-16 rounded border border-[var(--border)] bg-[var(--bg)] px-2 text-[11px] font-mono text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={
+                        !newTeamName.trim() ||
+                        newTeamKey.trim().length < 2 ||
+                        createTeam.isPending
+                      }
+                      className="h-6 flex-1 rounded bg-[var(--accent)] text-[11px] font-medium text-[var(--text)] hover:bg-[var(--accent-hover)] disabled:opacity-40 cursor-pointer"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {teams.map((team, idx) => {
+                const isExpanded = expandedTeams[team.id] ?? idx === 0;
+                const issuesHref = `/team/${team.key}/issues`;
+                const backlogHref = `/team/${team.key}/backlog`;
+                const cyclesHref = `/team/${team.key}/cycles`;
+                const isIssuesActive = pathname === issuesHref;
+                const isBacklogActive = pathname === backlogHref;
+                const isCyclesActive = pathname === cyclesHref;
+
+                return (
+                  <div key={team.id} className="space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedTeams((prev) => ({
+                          ...prev,
+                          [team.id]: !isExpanded,
+                        }))
+                      }
+                      className="flex h-7 w-full items-center justify-between rounded-[var(--radius)] px-2 text-[13px] text-[var(--text-2)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)] transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <Users2
+                          className="h-3.5 w-3.5 shrink-0 text-[var(--text-3)]"
+                          strokeWidth={1.5}
+                        />
+                        <span className="truncate">{team.name}</span>
+                      </span>
+                      <ChevronRight
+                        className={`h-3 w-3 shrink-0 text-[var(--text-4)] transition-transform duration-150 ${
+                          isExpanded ? "rotate-90" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {isExpanded && (
+                      <div className="pl-5 space-y-0.5">
+                        <Link
+                          href={issuesHref}
+                          className={`flex h-6 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[12px] transition-colors ${
+                            isIssuesActive
+                              ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
+                              : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
+                          }`}
+                        >
+                          <span>Issues</span>
+                        </Link>
+                        <Link
+                          href={backlogHref}
+                          className={`flex h-6 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[12px] transition-colors ${
+                            isBacklogActive
+                              ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
+                              : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
+                          }`}
+                        >
+                          <span>Backlog</span>
+                        </Link>
+                        <Link
+                          href={cyclesHref}
+                          className={`flex h-6 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[12px] transition-colors ${
+                            isCyclesActive
+                              ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
+                              : "text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
+                          }`}
+                        >
+                          <span>Cycles</span>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -412,13 +608,17 @@ export function Sidebar() {
           </button>
           {tryOpen && (
             <div className="pl-4 pr-1 py-1 space-y-0.5">
-              <button
-                type="button"
-                className="flex h-6 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[12px] text-[var(--text-4)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] cursor-pointer"
+              <Link
+                href="/cycles"
+                className={`flex h-6 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[12px] transition-colors ${
+                  pathname.startsWith("/cycles")
+                    ? "bg-[rgba(255,255,255,0.06)] text-[var(--text)] font-medium"
+                    : "text-[var(--text-4)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)]"
+                }`}
               >
                 <HelpCircle className="h-3 w-3" strokeWidth={1.5} />
                 <span>Cycles &amp; Sprints</span>
-              </button>
+              </Link>
             </div>
           )}
         </div>

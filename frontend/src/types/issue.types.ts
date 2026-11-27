@@ -85,6 +85,8 @@ export interface Issue {
   assignee?: IssueAssignee | null;
   creatorId?: string | null;
   labels?: Label[];
+  projectId?: string | null;
+  cycleId?: string | null;
   parentId?: string | null;
   parent?: IssueReference | null;
   subIssues?: IssueReference[];
@@ -103,6 +105,8 @@ export interface CreateIssueInput {
   priority?: IssuePriority;
   estimate?: number | null;
   assigneeId?: string | null;
+  projectId?: string | null;
+  cycleId?: string | null;
   parentId?: string | null;
   dueDate?: string | null;
   labelIds?: string[];
@@ -116,6 +120,8 @@ export interface UpdateIssueInput {
   estimate?: number | null;
   sortOrder?: number;
   assigneeId?: string | null;
+  projectId?: string | null;
+  cycleId?: string | null;
   parentId?: string | null;
   dueDate?: string | null;
   labelIds?: string[];

@@ -73,6 +73,9 @@ export function CreateIssueModal({ onIssueCreated }: CreateIssueModalProps) {
     closeCreateIssue,
     defaultStatus,
     defaultAssigneeId,
+    defaultTeamId,
+    defaultProjectId,
+    defaultCycleId,
     defaultParentId,
     defaultParentIdentifier,
   } = useModalStore();
@@ -103,10 +106,19 @@ export function CreateIssueModal({ onIssueCreated }: CreateIssueModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (teams.length > 0 && !selectedTeam) {
-      setSelectedTeam(teams[0]!);
+    if (teams.length > 0) {
+      if (defaultTeamId) {
+        const matched = teams.find((t) => t.id === defaultTeamId);
+        if (matched) {
+          setSelectedTeam(matched);
+          return;
+        }
+      }
+      if (!selectedTeam) {
+        setSelectedTeam(teams[0]!);
+      }
     }
-  }, [teams, selectedTeam]);
+  }, [teams, selectedTeam, defaultTeamId]);
 
   useEffect(() => {
     if (isCreateIssueOpen) {
@@ -182,6 +194,8 @@ export function CreateIssueModal({ onIssueCreated }: CreateIssueModalProps) {
         priority,
         assigneeId,
         estimate,
+        projectId: defaultProjectId ?? undefined,
+        cycleId: defaultCycleId ?? undefined,
         parentId: defaultParentId ?? undefined,
         dueDate: dueDate ? new Date(`${dueDate}T00:00:00.000Z`).toISOString() : undefined,
         labelIds: selectedLabels.length > 0 ? selectedLabels : undefined,

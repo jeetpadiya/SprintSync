@@ -79,7 +79,48 @@ export const teams = pgTable("teams", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// 7. Labels Table
+// 7. Projects Table (Cross-cutting initiatives & roadmaps)
+export const projects = pgTable("projects", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .references(() => workspaces.id, { onDelete: "cascade" })
+    .notNull(),
+  teamId: uuid("team_id").references(() => teams.id, { onDelete: "set null" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  summary: varchar("summary", { length: 500 }),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).default("PLANNED").notNull(), // PLANNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELED
+  leadId: uuid("lead_id").references(() => users.id, { onDelete: "set null" }),
+  startDate: timestamp("start_date"),
+  targetDate: timestamp("target_date"),
+  creatorId: uuid("creator_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// 7b. Cycles Table (2-week Sprint Engine + Historical Velocity Snapshots)
+export const cycles = pgTable("cycles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .references(() => workspaces.id, { onDelete: "cascade" })
+    .notNull(),
+  teamId: uuid("team_id")
+    .references(() => teams.id, { onDelete: "cascade" })
+    .notNull(),
+  number: integer("number").notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  status: varchar("status", { length: 30 }).default("ACTIVE").notNull(), // UPCOMING, ACTIVE, COMPLETED
+  startsAt: timestamp("starts_at").notNull(),
+  endsAt: timestamp("ends_at").notNull(),
+  completedPoints: integer("completed_points").default(0).notNull(),
+  totalPoints: integer("total_points").default(0).notNull(),
+  completedIssuesCount: integer("completed_issues_count").default(0).notNull(),
+  totalIssuesCount: integer("total_issues_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// 8. Labels Table
 export const labels = pgTable("labels", {
   id: uuid("id").primaryKey().defaultRandom(),
   workspaceId: uuid("workspace_id")
@@ -109,6 +150,8 @@ export const issues = pgTable("issues", {
   sortOrder: doublePrecision("sort_order").default(0).notNull(),
   assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
   creatorId: uuid("creator_id").references(() => users.id, { onDelete: "set null" }),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+  cycleId: uuid("cycle_id").references(() => cycles.id, { onDelete: "set null" }),
   parentId: uuid("parent_id"), // Parent issue if sub-issue
   dueDate: timestamp("due_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -207,3 +250,7 @@ export type IssueRelation = typeof issueRelations.$inferSelect;
 export type NewIssueRelation = typeof issueRelations.$inferInsert;
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
+export type Project = typeof projects.$inferSelect;
+export type NewProject = typeof projects.$inferInsert;
+export type Cycle = typeof cycles.$inferSelect;
+export type NewCycle = typeof cycles.$inferInsert;

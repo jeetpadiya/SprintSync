@@ -5,6 +5,8 @@ import teamRoutes from "./teamRoutes.js";
 import issueRoutes from "./issueRoutes.js";
 import labelRoutes from "./labelRoutes.js";
 import documentRoutes from "./documentRoutes.js";
+import projectRoutes from "./projectRoutes.js";
+import cycleRoutes from "./cycleRoutes.js";
 import { db } from "../db/db.js";
 import { users } from "../db/schema.js";
 
@@ -32,6 +34,12 @@ router.use("/labels", labelRoutes);
 
 // Document Routes: /api/documents/*
 router.use("/documents", documentRoutes);
+
+// Project Routes: /api/projects/*
+router.use("/projects", projectRoutes);
+
+// Cycle Routes: /api/cycles/*
+router.use("/cycles", cycleRoutes);
 
 // Users test endpoint: GET /api/users
 router.get("/users", async (_req: Request, res: Response) => {

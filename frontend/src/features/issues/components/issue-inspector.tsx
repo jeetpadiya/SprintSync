@@ -13,6 +13,8 @@ import {
   useUpdateIssue,
   useWorkspaceMembers,
 } from "@/features/issues/hooks/use-issues";
+import { useProjects } from "@/features/projects/hooks/use-projects";
+import { useCycles } from "@/features/cycles/hooks/use-cycles";
 import {
   IssuePriority,
   IssueRelationType,
@@ -34,6 +36,8 @@ import {
   GitBranch,
   Link2,
   Calendar,
+  FolderKanban,
+  Repeat,
 } from "lucide-react";
 
 const STATUS_OPTIONS: IssueStatus[] = [
@@ -98,6 +102,11 @@ export function IssueInspector({
   const { data: detailIssue } = useIssue(issueId, isAuthenticated);
   const { data: members = [] } = useWorkspaceMembers(undefined, isAuthenticated);
   const { data: allLabels = [] } = useLabels(undefined, isAuthenticated);
+  const { data: allProjects = [] } = useProjects(undefined, isAuthenticated);
+  const { data: teamCycles = [] } = useCycles(
+    undefined,
+    isAuthenticated
+  );
 
   const updateIssue = useUpdateIssue();
   const deleteIssue = useDeleteIssue();
@@ -342,6 +351,65 @@ export function IssueInspector({
             }
             className="h-7 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-elev)] px-2 text-[12px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
           />
+        </div>
+
+        {/* Project */}
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1 text-[var(--text-4)]">
+            <FolderKanban className="h-3 w-3" />
+            <span>Project</span>
+          </span>
+          <select
+            value={selectedIssue.projectId ?? ""}
+            onChange={(e) =>
+              updateIssue.mutate({
+                id: selectedIssue.id,
+                data: {
+                  projectId: e.target.value || null,
+                },
+              })
+            }
+            className="h-7 max-w-[185px] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-elev)] px-2 text-[12px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+          >
+            <option value="">No project</option>
+            {allProjects.map((proj) => (
+              <option key={proj.id} value={proj.id}>
+                {proj.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Cycle */}
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1 text-[var(--text-4)]">
+            <Repeat className="h-3 w-3" />
+            <span>Cycle</span>
+          </span>
+          <select
+            value={selectedIssue.cycleId ?? ""}
+            onChange={(e) =>
+              updateIssue.mutate({
+                id: selectedIssue.id,
+                data: {
+                  cycleId: e.target.value || null,
+                },
+              })
+            }
+            className="h-7 max-w-[185px] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-elev)] px-2 text-[12px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+          >
+            <option value="">No cycle</option>
+            {teamCycles
+              .filter(
+                (c) =>
+                  c.teamId === selectedIssue.teamId && c.status !== "COMPLETED"
+              )
+              .map((cycle) => (
+                <option key={cycle.id} value={cycle.id}>
+                  {cycle.name} ({cycle.status.toLowerCase()})
+                </option>
+              ))}
+          </select>
         </div>
 
         {/* Labels */}

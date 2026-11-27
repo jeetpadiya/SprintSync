@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CreateIssueModal } from "@/features/issues/components/create-issue-modal";
+import { CommandMenu } from "@/features/command-menu/command-menu";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -42,6 +43,7 @@ export function WorkspaceShell({ children }: WorkspaceShellProps) {
       <Sidebar />
       <main className="flex flex-1 flex-col overflow-hidden">{children}</main>
       <CreateIssueModal />
+      <CommandMenu />
     </div>
   );
 }

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { IssueInspector } from "@/features/issues/components/issue-inspector";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useModalStore } from "@/store/useModalStore";
+import { useUIStore } from "@/store/useUIStore";
 import { useIssues } from "@/features/issues/hooks/use-issues";
 import { Issue, IssueStatus } from "@/types/issue.types";
 import {
@@ -47,6 +48,7 @@ const STATUS_OPTIONS: IssueStatus[] = [
 export function MyIssuesView() {
   const { user, isAuthenticated } = useAuthStore();
   const { openCreateIssue } = useModalStore();
+  const { setIssueNavigation, clearIssueNavigation } = useUIStore();
 
   const [activeTab, setActiveTab] = useState<MyIssuesTab>("assigned");
   const [statusFilter, setStatusFilter] = useState<IssueStatus | "ALL">("ALL");
@@ -93,6 +95,26 @@ export function MyIssuesView() {
   // If inspector is visible and user hasn't picked a row yet, show the first visible issue automatically
   const effectiveSelectedId =
     selectedIssueId ?? tabFilteredIssues[0]?.id ?? null;
+
+  const orderedIds = useMemo(
+    () => tabFilteredIssues.map((i) => i.id),
+    [tabFilteredIssues]
+  );
+
+  useEffect(() => {
+    setIssueNavigation({
+      activeIssueId: effectiveSelectedId,
+      orderedIssueIds: orderedIds,
+      onSelect: (id) => {
+        setSelectedIssueId(id);
+        if (id) setShowInspector(true);
+      },
+    });
+  }, [effectiveSelectedId, orderedIds, setIssueNavigation]);
+
+  useEffect(() => {
+    return () => clearIssueNavigation();
+  }, [clearIssueNavigation]);
 
   const handleOpenNewIssue = () => {
     openCreateIssue({

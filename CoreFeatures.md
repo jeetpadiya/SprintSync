@@ -10,11 +10,11 @@ This document outlines the **non-negotiable core features** of SprintSync (Linea
 | :--- | :--- | :--- | :--- |
 | **1. Authentication & Session** | HttpOnly cookies, JWT rotation, user profile | **P0** | ✅ Completed |
 | **2. Issue Management Core** | Identifiers (`ENG-101`), statuses, priorities, estimates | **P0** | ✅ Completed |
-| **3. Dual Views (Board & List)** | Drag-and-drop Kanban + high-density virtualized list | **P0** | ⏳ Next Up |
-| **4. Keyboard Navigation & `Cmd+K`** | Global hotkeys (`C`, `J`, `K`) + command palette | **P0** | 🔲 Planned |
-| **5. Cycles (Sprints Engine)** | Automated sprint cadence + backlog rollover | **P0** | 🔲 Planned |
-| **6. Optimistic UI Layer** | Sub-50ms local cache updates with rollback | **P0** | 🔲 Planned |
-| **7. Projects & Initiatives** | Milestones, health statuses, progress tracking | **P1** | 🔲 Planned |
+| **3. Dual Views (Board & List)** | Drag-and-drop Kanban + high-density virtualized list | **P0** | ✅ Completed |
+| **4. Keyboard Navigation & `Cmd+K`** | Global hotkeys (`C`, `J`, `K`) + command palette | **P0** | ✅ Completed |
+| **5. Cycles (Sprints Engine)** | Automated sprint cadence + backlog rollover | **P0** | ✅ Completed |
+| **6. Optimistic UI Layer** | Sub-50ms local cache updates with rollback | **P0** | ✅ Completed |
+| **7. Projects & Initiatives** | Milestones, health statuses, progress tracking | **P1** | ✅ Completed |
 | **8. Tiptap Markdown Editor** | Task checklists, slash commands (`/`), auto-save | **P1** | ✅ Completed |
 | **9. Real-Time Collaboration** | WebSocket sync (Socket.io) for live changes | **P1** | 🔲 Planned |
 
@@ -77,10 +77,10 @@ Flexible visualization for different workflows.
 - **View Toggle**: Quick switch between Board and List without reloading data.
 
 ### Implementation Checklist:
-- [ ] Board view layout with droppable columns
-- [ ] Draggable issue card with keyboard accessibility
-- [ ] Fractional indexing integration on drop
-- [ ] Virtualized list component with sorting and grouping headers
+- [x] Board view layout with droppable columns
+- [x] Draggable issue card with keyboard accessibility
+- [x] Fractional indexing integration on drop
+- [x] Virtualized list component with sorting and grouping headers
 
 ---
 
@@ -102,9 +102,9 @@ Desktop-app responsiveness without relying on mouse input.
   * `Backspace`: Cancel / delete selected issue.
 
 ### Implementation Checklist:
-- [ ] Global `CommandMenu` dialog component
-- [ ] Hotkeys provider listening across workspace routes
-- [ ] Quick issue creation modal (`C`) with autofocus on title input
+- [x] Global `CommandMenu` dialog component
+- [x] Hotkeys provider listening across workspace routes
+- [x] Quick issue creation modal (`C`) with autofocus on title input
 
 ---
 
@@ -119,10 +119,10 @@ Automated, fixed-cadence execution cycles.
   * Historical cycle snapshots (velocity metrics).
 
 ### Implementation Checklist:
-- [ ] Database table: `cycles`
-- [ ] Cycle management API endpoints
-- [ ] Active cycle dashboard view with scope progress
-- [ ] Background job / rollover logic for closing cycles
+- [x] Database table: `cycles`
+- [x] Cycle management API endpoints
+- [x] Active cycle dashboard view with scope progress
+- [x] Background job / rollover logic for closing cycles
 
 ---
 
@@ -149,9 +149,9 @@ Organizing cross-cutting initiatives that span multiple cycles.
 - Lead engineer, target date, and automated progress calculation.
 
 ### Implementation Checklist:
-- [ ] Database table: `projects`
-- [ ] Projects grid view and project detail page
-- [ ] Progress aggregation based on child issue statuses
+- [x] Database table: `projects`
+- [x] Projects grid view and project detail page
+- [x] Progress aggregation based on child issue statuses
 
 ---
 
