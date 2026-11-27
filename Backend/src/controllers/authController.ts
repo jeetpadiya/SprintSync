@@ -4,7 +4,13 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/db.js";
-import { users, refreshTokens, workspaces, workspaceMembers } from "../db/schema.js";
+import {
+  users,
+  refreshTokens,
+  workspaces,
+  workspaceMembers,
+  workspaceInvitations,
+} from "../db/schema.js";
 import {
   ACCESS_COOKIE_OPTIONS,
   REFRESH_COOKIE_OPTIONS,
@@ -146,6 +152,47 @@ export const register = async (req: Request, res: Response): Promise<void | Resp
       });
     }
 
+    // 4b. Auto-accept any pending workspace invitations for this email
+    const pendingInvites = await db
+      .select({
+        id: workspaceInvitations.id,
+        workspaceId: workspaceInvitations.workspaceId,
+        role: workspaceInvitations.role,
+      })
+      .from(workspaceInvitations)
+      .where(eq(workspaceInvitations.email, email));
+
+    if (pendingInvites.length > 0) {
+      const seenWorkspaceIds = new Set<string>();
+      const memberRows = pendingInvites
+        .filter((inv) => {
+          if (seenWorkspaceIds.has(inv.workspaceId)) return false;
+          seenWorkspaceIds.add(inv.workspaceId);
+          return true;
+        })
+        .map((inv) => ({
+          workspaceId: inv.workspaceId,
+          userId: newUser.id,
+          role: inv.role || "MEMBER",
+        }));
+
+      await db.insert(workspaceMembers).values(memberRows);
+      await db
+        .delete(workspaceInvitations)
+        .where(eq(workspaceInvitations.email, email));
+    }
+
+    const userWorkspaces = await db
+      .select({
+        id: workspaces.id,
+        name: workspaces.name,
+        slug: workspaces.slug,
+        role: workspaceMembers.role,
+      })
+      .from(workspaceMembers)
+      .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
+      .where(eq(workspaceMembers.userId, newUser.id));
+
     // 5. Issue Dual Tokens (Session Initialization) & Set HttpOnly Cookies
     await issueSessionTokens({
       res,
@@ -163,7 +210,7 @@ export const register = async (req: Request, res: Response): Promise<void | Resp
         email: newUser.email,
         role: newUser.role,
         title: null,
-        workspaces: [],
+        workspaces: userWorkspaces,
       },
     });
   } catch (error) {

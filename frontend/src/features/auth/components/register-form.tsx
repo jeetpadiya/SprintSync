@@ -28,10 +28,18 @@ export function RegisterForm() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
+
+  useEffect(() => {
+    const invitedEmail = new URLSearchParams(window.location.search).get("email");
+    if (invitedEmail) {
+      setValue("email", invitedEmail);
+    }
+  }, [setValue]);
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true);

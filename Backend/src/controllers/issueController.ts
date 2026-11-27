@@ -45,6 +45,8 @@ export const getIssues = async (
       priority,
       assigneeId,
       creatorId,
+      projectId,
+      cycleId,
       search,
       workspaceId: queryWorkspaceId,
     } = req.query;
@@ -81,6 +83,12 @@ export const getIssues = async (
     if (creatorId && typeof creatorId === "string") {
       conditions.push(eq(issues.creatorId, creatorId));
     }
+    if (projectId && typeof projectId === "string") {
+      conditions.push(eq(issues.projectId, projectId));
+    }
+    if (cycleId && typeof cycleId === "string") {
+      conditions.push(eq(issues.cycleId, cycleId));
+    }
     if (search && typeof search === "string") {
       conditions.push(ilike(issues.title, `%${search.trim()}%`));
     }
@@ -96,6 +104,8 @@ export const getIssues = async (
         priority: issues.priority,
         estimate: issues.estimate,
         sortOrder: issues.sortOrder,
+        projectId: issues.projectId,
+        cycleId: issues.cycleId,
         parentId: issues.parentId,
         dueDate: issues.dueDate,
         creatorId: issues.creatorId,
@@ -209,6 +219,8 @@ export const getIssueById = async (
         priority: issues.priority,
         estimate: issues.estimate,
         sortOrder: issues.sortOrder,
+        projectId: issues.projectId,
+        cycleId: issues.cycleId,
         parentId: issues.parentId,
         dueDate: issues.dueDate,
         createdAt: issues.createdAt,
@@ -395,6 +407,8 @@ export const createIssue = async (
       priority,
       estimate,
       assigneeId,
+      projectId,
+      cycleId,
       parentId,
       dueDate,
       labelIds,
@@ -441,6 +455,8 @@ export const createIssue = async (
         sortOrder: issueNumber * 1000,
         assigneeId: assigneeId || null,
         creatorId: req.user.id,
+        projectId: projectId || null,
+        cycleId: cycleId || null,
         parentId: parentId || null,
         dueDate: dueDate ? new Date(dueDate) : null,
       })
@@ -563,6 +579,8 @@ export const updateIssue = async (
     if (data.estimate !== undefined) updateFields.estimate = data.estimate;
     if (data.sortOrder !== undefined) updateFields.sortOrder = data.sortOrder;
     if (data.assigneeId !== undefined) updateFields.assigneeId = data.assigneeId;
+    if (data.projectId !== undefined) updateFields.projectId = data.projectId;
+    if (data.cycleId !== undefined) updateFields.cycleId = data.cycleId;
     if (data.parentId !== undefined) updateFields.parentId = data.parentId;
     if (data.dueDate !== undefined) {
       updateFields.dueDate = data.dueDate ? new Date(data.dueDate) : null;

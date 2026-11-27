@@ -57,6 +57,22 @@ export function useTeams(workspaceId?: string, enabled = true) {
   });
 }
 
+export function useCreateTeam() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { name: string; key: string; workspaceId?: string }) =>
+      issuesApi.createTeam(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      toast.success("Team created");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to create team");
+    },
+  });
+}
+
 export function useLabels(workspaceId?: string, enabled = true) {
   return useQuery({
     queryKey: issueKeys.labels(workspaceId),
@@ -86,6 +102,8 @@ export function useCreateIssue() {
     mutationFn: (input: CreateIssueInput) => issuesApi.createIssue(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: issueKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["cycles"] });
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Failed to create issue");
@@ -126,8 +144,17 @@ export function useUpdateIssue() {
                   ...(data.estimate !== undefined
                     ? { estimate: data.estimate }
                     : {}),
+                  ...(data.sortOrder !== undefined
+                    ? { sortOrder: data.sortOrder }
+                    : {}),
                   ...(data.assigneeId !== undefined
                     ? { assigneeId: data.assigneeId }
+                    : {}),
+                  ...(data.projectId !== undefined
+                    ? { projectId: data.projectId }
+                    : {}),
+                  ...(data.cycleId !== undefined
+                    ? { cycleId: data.cycleId }
                     : {}),
                   ...(data.parentId !== undefined
                     ? { parentId: data.parentId }
@@ -150,8 +177,15 @@ export function useUpdateIssue() {
           ...(data.status !== undefined ? { status: data.status } : {}),
           ...(data.priority !== undefined ? { priority: data.priority } : {}),
           ...(data.estimate !== undefined ? { estimate: data.estimate } : {}),
+          ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
           ...(data.assigneeId !== undefined
             ? { assigneeId: data.assigneeId }
+            : {}),
+          ...(data.projectId !== undefined
+            ? { projectId: data.projectId }
+            : {}),
+          ...(data.cycleId !== undefined
+            ? { cycleId: data.cycleId }
             : {}),
           ...(data.parentId !== undefined ? { parentId: data.parentId } : {}),
           ...(data.dueDate !== undefined ? { dueDate: data.dueDate } : {}),
@@ -171,6 +205,8 @@ export function useUpdateIssue() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: issueKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["cycles"] });
     },
   });
 }
@@ -204,6 +240,8 @@ export function useDeleteIssue() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: issueKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["cycles"] });
     },
   });
 }

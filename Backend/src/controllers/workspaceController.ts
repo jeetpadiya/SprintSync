@@ -9,6 +9,7 @@ import {
 } from "../db/schema.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { createWorkspaceSchema, inviteTeammatesSchema } from "../utils/workspaceSchemas.js";
+import { sendWorkspaceInvitationEmail } from "../services/emailService.js";
 
 /**
  * GET /api/workspaces
@@ -177,19 +178,64 @@ export const inviteTeammates = async (
     }
 
     // Persist invitations
-    const invitationRows = emails.map((email) => ({
+    const normalizedEmails = Array.from(
+      new Set(emails.map((email) => email.trim().toLowerCase()))
+    );
+
+    const invitationRows = normalizedEmails.map((email) => ({
       workspaceId: workspaceId!,
-      email: email.toLowerCase(),
+      email,
       role: "MEMBER",
       invitedBy: req.user!.id,
     }));
 
     await db.insert(workspaceInvitations).values(invitationRows);
 
+    // Resolve workspace + inviter metadata for email templates
+    const [workspace] = await db
+      .select({ name: workspaces.name, slug: workspaces.slug })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId!))
+      .limit(1);
+
+    const [inviter] = await db
+      .select({ name: users.name, email: users.email })
+      .from(users)
+      .where(eq(users.id, req.user.id))
+      .limit(1);
+
+    let emailsSent = 0;
+    let emailsFailed = 0;
+
+    if (workspace) {
+      const results = await Promise.all(
+        normalizedEmails.map((to) =>
+          sendWorkspaceInvitationEmail({
+            to,
+            workspaceName: workspace.name,
+            workspaceSlug: workspace.slug,
+            inviterName: inviter?.name || "A teammate",
+            inviterEmail: inviter?.email || req.user!.email,
+            role: "Member",
+          })
+        )
+      );
+
+      for (const result of results) {
+        if (result.sent) {
+          emailsSent += 1;
+        } else {
+          emailsFailed += 1;
+        }
+      }
+    }
+
     return res.status(200).json({
       success: true,
-      message: `Successfully invited ${emails.length} teammate${emails.length > 1 ? "s" : ""}`,
-      count: emails.length,
+      message: `Successfully invited ${normalizedEmails.length} teammate${normalizedEmails.length > 1 ? "s" : ""}`,
+      count: normalizedEmails.length,
+      emailsSent,
+      emailsFailed,
     });
   } catch (error) {
     console.error("Invite teammates error:", error);
