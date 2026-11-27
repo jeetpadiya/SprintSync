@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { IssueInspector } from "@/features/issues/components/issue-inspector";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -48,7 +48,8 @@ const STATUS_OPTIONS: IssueStatus[] = [
 export function MyIssuesView() {
   const { user, isAuthenticated } = useAuthStore();
   const { openCreateIssue } = useModalStore();
-  const { setIssueNavigation, clearIssueNavigation } = useUIStore();
+  const setIssueNavigation = useUIStore((s) => s.setIssueNavigation);
+  const clearIssueNavigation = useUIStore((s) => s.clearIssueNavigation);
 
   const [activeTab, setActiveTab] = useState<MyIssuesTab>("assigned");
   const [statusFilter, setStatusFilter] = useState<IssueStatus | "ALL">("ALL");
@@ -100,20 +101,24 @@ export function MyIssuesView() {
     () => tabFilteredIssues.map((i) => i.id),
     [tabFilteredIssues]
   );
+  const orderedIdsKey = orderedIds.join(",");
+
+  const handleSelectIssueFromHotkey = useCallback((id: string | null) => {
+    setSelectedIssueId(id);
+    if (id) setShowInspector(true);
+  }, []);
 
   useEffect(() => {
-    setIssueNavigation({
+    setIssueNavigation?.({
       activeIssueId: effectiveSelectedId,
       orderedIssueIds: orderedIds,
-      onSelect: (id) => {
-        setSelectedIssueId(id);
-        if (id) setShowInspector(true);
-      },
+      onSelect: handleSelectIssueFromHotkey,
     });
-  }, [effectiveSelectedId, orderedIds, setIssueNavigation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveSelectedId, orderedIdsKey, handleSelectIssueFromHotkey, setIssueNavigation]);
 
   useEffect(() => {
-    return () => clearIssueNavigation();
+    return () => clearIssueNavigation?.();
   }, [clearIssueNavigation]);
 
   const handleOpenNewIssue = () => {

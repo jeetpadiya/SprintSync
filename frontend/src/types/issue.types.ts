@@ -39,8 +39,22 @@ export interface Team {
   name: string;
   key: string;
   issueCounter: number;
+  memberCount?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export type TeamMemberRole = "LEAD" | "MEMBER";
+
+export interface TeamMember {
+  id: string;
+  userId: string;
+  teamId: string;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+  role: TeamMemberRole;
+  joinedAt: string;
 }
 
 export interface Label {

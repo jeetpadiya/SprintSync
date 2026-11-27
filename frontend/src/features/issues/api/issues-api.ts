@@ -5,6 +5,8 @@ import {
   CreateIssueInput,
   UpdateIssueInput,
   Team,
+  TeamMember,
+  TeamMemberRole,
   Label,
   IssueRelation,
   IssueRelationType,
@@ -91,6 +93,56 @@ export const issuesApi = {
       method: "POST",
       data,
     });
+  },
+
+  getTeamMembers: (
+    teamId: string
+  ): Promise<{ success: boolean; members: TeamMember[] }> => {
+    return apiClient<{ success: boolean; members: TeamMember[] }>(
+      `${ENDPOINTS.TEAMS}/${teamId}/members`,
+      {
+        method: "GET",
+      }
+    );
+  },
+
+  addTeamMember: (
+    teamId: string,
+    data: { userId: string; role?: TeamMemberRole }
+  ): Promise<{ success: boolean; member: TeamMember }> => {
+    return apiClient<{ success: boolean; member: TeamMember }>(
+      `${ENDPOINTS.TEAMS}/${teamId}/members`,
+      {
+        method: "POST",
+        data,
+      }
+    );
+  },
+
+  updateTeamMemberRole: (
+    teamId: string,
+    userId: string,
+    role: TeamMemberRole
+  ): Promise<{ success: boolean; member: TeamMember }> => {
+    return apiClient<{ success: boolean; member: TeamMember }>(
+      `${ENDPOINTS.TEAMS}/${teamId}/members/${userId}`,
+      {
+        method: "PATCH",
+        data: { role },
+      }
+    );
+  },
+
+  removeTeamMember: (
+    teamId: string,
+    userId: string
+  ): Promise<{ success: boolean; message: string }> => {
+    return apiClient<{ success: boolean; message: string }>(
+      `${ENDPOINTS.TEAMS}/${teamId}/members/${userId}`,
+      {
+        method: "DELETE",
+      }
+    );
   },
 
   getLabels: (workspaceId?: string): Promise<{ success: boolean; labels: Label[] }> => {

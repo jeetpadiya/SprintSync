@@ -80,7 +80,20 @@ export const updateIssueSchema = z.object({
   labelIds: z.array(z.string().uuid()).optional(),
 });
 
+export const teamMemberRoleEnum = z.enum(["LEAD", "MEMBER"]);
+
+export const addTeamMemberSchema = z.object({
+  userId: z.string().uuid("Valid user ID is required"),
+  role: teamMemberRoleEnum.default("MEMBER"),
+});
+
+export const updateTeamMemberRoleSchema = z.object({
+  role: teamMemberRoleEnum,
+});
+
 export type CreateTeamInput = z.infer<typeof createTeamSchema>;
+export type AddTeamMemberInput = z.infer<typeof addTeamMemberSchema>;
+export type UpdateTeamMemberRoleInput = z.infer<typeof updateTeamMemberRoleSchema>;
 export type CreateIssueInput = z.infer<typeof createIssueSchema>;
 export type UpdateIssueInput = z.infer<typeof updateIssueSchema>;
 export type CreateIssueRelationInput = z.infer<typeof createIssueRelationSchema>;

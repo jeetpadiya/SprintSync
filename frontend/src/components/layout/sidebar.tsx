@@ -583,6 +583,12 @@ export function Sidebar() {
                         >
                           <span>Cycles</span>
                         </Link>
+                        <Link
+                          href={`/settings?tab=teams&team=${team.key}`}
+                          className="flex h-6 w-full items-center gap-2 rounded-[var(--radius)] px-2 text-[12px] text-[var(--text-3)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-2)] transition-colors"
+                        >
+                          <span>Members</span>
+                        </Link>
                       </div>
                     )}
                   </div>

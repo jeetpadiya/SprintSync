@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import { KanbanBoard } from "@/features/issues/components/board/kanban-board";
 import { VirtualIssueList } from "@/features/issues/components/list/virtual-issue-list";
@@ -34,12 +34,10 @@ export function TeamIssuesView({
 }: TeamIssuesViewProps) {
   const { isAuthenticated } = useAuthStore();
   const { openCreateIssue } = useModalStore();
-  const {
-    issueViewMode,
-    setIssueViewMode,
-    setIssueNavigation,
-    clearIssueNavigation,
-  } = useUIStore();
+  const issueViewMode = useUIStore((s) => s.issueViewMode);
+  const setIssueViewMode = useUIStore((s) => s.setIssueViewMode);
+  const setIssueNavigation = useUIStore((s) => s.setIssueNavigation);
+  const clearIssueNavigation = useUIStore((s) => s.clearIssueNavigation);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
@@ -86,17 +84,24 @@ export function TeamIssuesView({
     () => filteredIssues.map((i) => i.id),
     [filteredIssues]
   );
+  const orderedIdsKey = orderedIds.join(",");
+
+  const handleSelectIssueFromHotkey = useCallback(
+    (id: string | null) => setSelectedIssueId(id),
+    []
+  );
 
   useEffect(() => {
-    setIssueNavigation({
+    setIssueNavigation?.({
       activeIssueId: selectedIssueId,
       orderedIssueIds: orderedIds,
-      onSelect: (id) => setSelectedIssueId(id),
+      onSelect: handleSelectIssueFromHotkey,
     });
-  }, [selectedIssueId, orderedIds, setIssueNavigation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIssueId, orderedIdsKey, handleSelectIssueFromHotkey, setIssueNavigation]);
 
   useEffect(() => {
-    return () => clearIssueNavigation();
+    return () => clearIssueNavigation?.();
   }, [clearIssueNavigation]);
 
   const handleCreateIssue = (defaultStatus?: IssueStatus) => {
