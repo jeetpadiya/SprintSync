@@ -18,7 +18,16 @@ interface UIState {
   clearIssueNavigation: () => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+function areIdsEqual(a: string[], b: string[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+export const useUIStore = create<UIState>((set, get) => ({
   issueViewMode: "list",
   collapsedGroups: {},
   activeIssueId: null,
@@ -32,16 +41,34 @@ export const useUIStore = create<UIState>((set) => ({
         [key]: !state.collapsedGroups[key],
       },
     })),
-  setIssueNavigation: ({ activeIssueId, orderedIssueIds, onSelect }) =>
+  setIssueNavigation: ({ activeIssueId, orderedIssueIds, onSelect }) => {
+    const prev = get();
+    if (
+      prev.activeIssueId === activeIssueId &&
+      prev.onSelectActiveIssue === onSelect &&
+      areIdsEqual(prev.orderedIssueIds, orderedIssueIds)
+    ) {
+      return;
+    }
     set({
       activeIssueId,
       orderedIssueIds,
       onSelectActiveIssue: onSelect,
-    }),
-  clearIssueNavigation: () =>
+    });
+  },
+  clearIssueNavigation: () => {
+    const prev = get();
+    if (
+      prev.activeIssueId === null &&
+      prev.orderedIssueIds.length === 0 &&
+      prev.onSelectActiveIssue === null
+    ) {
+      return;
+    }
     set({
       activeIssueId: null,
       orderedIssueIds: [],
       onSelectActiveIssue: null,
-    }),
+    });
+  },
 }));

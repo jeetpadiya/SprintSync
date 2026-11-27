@@ -49,7 +49,8 @@ export function VirtualIssueList({
   statuses = DEFAULT_LIST_STATUSES,
 }: VirtualIssueListProps) {
   const scrollParentRef = useRef<HTMLDivElement>(null);
-  const { collapsedGroups, toggleGroupCollapsed } = useUIStore();
+  const collapsedGroups = useUIStore((s) => s.collapsedGroups);
+  const toggleGroupCollapsed = useUIStore((s) => s.toggleGroupCollapsed);
 
   const rows = useMemo<VirtualRow[]>(() => {
     const grouped = new Map<IssueStatus, Issue[]>();

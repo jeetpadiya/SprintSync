@@ -31,7 +31,9 @@ import {
   Tag,
   User as UserIcon,
   Users,
+  Users2,
 } from "lucide-react";
+import { TeamsSettingsSection } from "./teams-settings-section";
 
 type SettingsSection =
   | "personal-profile"
@@ -41,7 +43,8 @@ type SettingsSection =
   | "issues-defaults"
   | "projects-general"
   | "features-modules"
-  | "members";
+  | "members"
+  | "teams";
 
 const STATUS_LIST: IssueStatus[] = [
   "BACKLOG",
@@ -70,7 +73,8 @@ export function SettingsView() {
     isAuthenticated,
     isLoading: authLoading,
   } = useAuthStore();
-  const { issueViewMode, setIssueViewMode } = useUIStore();
+  const issueViewMode = useUIStore((s) => s.issueViewMode);
+  const setIssueViewMode = useUIStore((s) => s.setIssueViewMode);
 
   const [activeSection, setActiveSection] =
     useState<SettingsSection>("personal-profile");
@@ -114,6 +118,7 @@ export function SettingsView() {
   // Workspace members & invites
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
+  const [initialTeamKey, setInitialTeamKey] = useState<string | null>(null);
 
   const { data: members = [], isLoading: membersLoading } =
     useWorkspaceMembers(undefined, isAuthenticated);
@@ -131,8 +136,14 @@ export function SettingsView() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
+    const teamParam = params.get("team");
+    if (teamParam) {
+      setInitialTeamKey(teamParam);
+    }
     if (tab === "members") {
       setActiveSection("members");
+    } else if (tab === "teams") {
+      setActiveSection("teams");
     } else if (tab === "issues") {
       setActiveSection("issues-workflows");
     } else if (tab === "projects") {
@@ -307,6 +318,12 @@ export function SettingsView() {
               onClick={() => setActiveSection("members")}
               icon={Users}
               label="General & Members"
+            />
+            <SettingsNavItem
+              active={activeSection === "teams"}
+              onClick={() => setActiveSection("teams")}
+              icon={Users2}
+              label="Teams"
             />
           </div>
         </nav>
@@ -877,6 +894,17 @@ export function SettingsView() {
                 </div>
               </section>
             </>
+          )}
+
+          {/* WORKSPACE: TEAMS & TEAM MEMBERS */}
+          {activeSection === "teams" && (
+            <TeamsSettingsSection
+              workspaceId={activeWorkspace?.id}
+              currentUserId={user?.id}
+              initialTeamKey={initialTeamKey}
+              enabled={isAuthenticated}
+              onNavigateToWorkspaceMembers={() => setActiveSection("members")}
+            />
           )}
         </div>
       </main>
